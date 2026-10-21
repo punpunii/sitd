@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SITD - Smart Sitting Dashboard</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
+    body {
+      font-family: 'Kanit', sans-serif;
+      background-color: #f3f0ff;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col md:flex-row">
+
+  <!-- ==================== ONBOARDING MODAL ==================== -->
+  <div id="welcomeModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl transition-all transform scale-100">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner">
+          <i data-lucide="armchair" class="w-8 h-8"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-slate-800">ยินดีต้อนรับสู่ SITD</h2>
+        <p class="text-sm text-slate-500 mt-1">Sit Better · Learn Better</p>
+      </div>
+
+      <form id="onboardingForm" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">กรุณาระบุชื่อของคุณ (สำหรับใช้เรียกในระบบ)</label>
+          <input type="text" id="usernameInput" value="พชรพรรณ" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 bg-slate-50" placeholder="พิมพ์ชื่อของคุณที่นี่..." required>
+        </div>
+
+        <div class="pt-2 space-y-2">
+          <button type="submit" id="btnConnectDevice" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-xl shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2">
+            <i data-lucide="bluetooth" class="w-5 h-5"></i>
+            เชื่อมต่อเบาะรองนั่ง SITD
+          </button>
+          
+          <button type="button" id="btnDemoMode" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2">
+            <i data-lucide="play-circle" class="w-5 h-5"></i>
+            ทดลองใช้งาน (Demo Simulation Mode)
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== SIDEBAR ==================== -->
+  <aside class="w-full md:w-64 bg-white/80 backdrop-blur-md border-r border-indigo-100 p-6 flex flex-col justify-between flex-shrink-0">
+    <div>
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3 mb-8">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-200">
+          <i data-lucide="armchair" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight text-indigo-950">SITD</h1>
+          <p class="text-[10px] text-indigo-400 font-medium tracking-wide">Sit Better · Learn Better</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="space-y-1.5">
+        <button onclick="switchTab('home')" id="nav-home" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all bg-indigo-600 text-white shadow-md shadow-indigo-100">
+          <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+          หน้าหลัก
+        </button>
+        <button onclick="switchTab('stats')" id="nav-stats" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all">
+          <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+          สถิติ
+        </button>
+        <button onclick="switchTab('alerts')" id="nav-alerts" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all relative">
+          <i data-lucide="bell" class="w-5 h-5"></i>
+          การแจ้งเตือน
+          <span class="ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">2</span>
+        </button>
+        <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all">
+          <i data-lucide="settings" class="w-5 h-5"></i>
+          ตั้งค่าอุปกรณ์
+        </button>
+      </nav>
+    </div>
+
+    <!-- Motivational Box -->
+    <div class="mt-8 p-4 bg-indigo-50/70 border border-indigo-100 rounded-2xl text-center">
+      <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-2 text-indigo-600 shadow-sm">
+        <i data-lucide="sparkles" class="w-6 h-6"></i>
+      </div>
+      <p class="text-xs font-semibold text-indigo-900">“นั่งถูกท่า เพื่ออนาคตที่ดีกว่า”</p>
+      <p class="text-[10px] text-indigo-500 mt-1">SITD Smart Health Companion</p>
+    </div>
+  </aside>
+
+  <!-- ==================== MAIN CONTENT AREA ==================== -->
+  <main class="flex-1 p-4 md:p-8 max-w-6xl mx-auto w-full custom-scrollbar">
+
+    <!-- Top Bar Header -->
+    <header class="flex items-center justify-between mb-6">
+      <div>
+        <h2 class="text-2xl font-bold text-slate-800">ภาพรวมการนั่งของคุณวันนี้</h2>
+        <p class="text-xs text-slate-400 font-medium">16 ตุลาคม 2568</p>
+      </div>
+      <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm">
+        <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-600">
+          <i data-lucide="user" class="w-5 h-5"></i>
+        </div>
+        <div class="text-right">
+          <p class="text-[10px] text-slate-400">สวัสดี</p>
+          <p id="displayUsername" class="text-sm font-semibold text-slate-700">พชรพรรณ</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- TAB 1: HOME DASHBOARD -->
+    <div id="tab-home" class="tab-content space-y-6">
+      
+      <!-- Top Banner Summary Card -->
+      <div class="bg-gradient-to-r from-indigo-50 via-purple-50 to-white border border-indigo-100/80 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+        <div class="flex items-center gap-6 z-10">
+          <!-- Score Donut Chart Simulator -->
+          <div class="relative w-28 h-28 flex-shrink-0 flex items-center justify-center">
+            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+              <path class="text-indigo-100" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path class="text-emerald-500 transition-all duration-700 ease-out" stroke-dasharray="78, 100" stroke-width="3.5" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <span class="text-2xl font-bold text-slate-800">78%</span>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-lg font-bold text-slate-800 mb-1">นั่งในท่าที่เหมาะสม</h3>
+            <p class="text-sm text-slate-500">จากเวลานั่งทั้งหมด <span class="font-semibold text-slate-700">5 ชม. 32 นาที</span></p>
+            <div class="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-medium border border-emerald-100">
+              <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
+              ↑ 12% จากเมื่อวาน
+            </div>
+          </div>
+        </div>
+
+        <!-- Posture Avatar Display -->
+        <div class="bg-white/90 backdrop-blur rounded-2xl p-4 border border-indigo-50 shadow-sm flex items-center gap-4 z-10">
+          <div class="relative w-20 h-24 flex items-center justify-center bg-slate-50 rounded-xl overflow-hidden">
+            <!-- Avatar Illustration -->
+            <svg id="postureAvatarSvg" class="w-16 h-20 text-indigo-600 transition-all duration-300" viewBox="0 0 100 120" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round">
+              <circle cx="50" cy="25" r="12" />
+              <path d="M50 37 V75 M50 50 L30 65 M50 50 L70 65 M50 75 L30 105 M50 75 L70 105" />
+            </svg>
+          </div>
+          <div>
+            <div id="postureBadge" class="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 mb-1">
+              นั่งหลังตรง
+            </div>
+            <p id="postureDesc" class="text-xs text-slate-500">กำลังดีเลย! รักษาสมดุลแบบนี้ไว้</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Dashboard Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Left Column: Pressure Heatmap -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+              แรงกดบนเบาะ <span class="text-xs font-normal text-slate-400">(Real-time)</span>
+            </h3>
+            <div class="flex items-center gap-2 text-xs text-emerald-500 font-medium bg-emerald-50 px-2.5 py-1 rounded-full">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+              เชื่อมต่อแล้ว
+            </div>
+          </div>
+
+          <div class="flex flex-col sm:flex-row items-center gap-6">
+            <!-- Heatmap Canvas Container -->
+            <div class="relative w-48 h-48 bg-slate-50 rounded-2xl border border-slate-100 p-2 flex items-center justify-center shadow-inner">
+              <canvas id="heatmapCanvas" width="180" height="180" class="rounded-xl"></canvas>
+            </div>
+
+            <!-- Heatmap Legend -->
+            <div class="flex flex-col gap-3 text-xs text-slate-600">
+              <div class="flex items-center gap-2">
+                <span class="w-3.5 h-3.5 rounded-full bg-red-500 shadow-sm"></span>
+                <span>แรงกดสูง (มากเกินไป)</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-3.5 h-3.5 rounded-full bg-lime-400 shadow-sm"></span>
+                <span>แรงกดปานกลาง (สมดุล)</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-3.5 h-3.5 rounded-full bg-blue-500 shadow-sm"></span>
+                <span>แรงกดต่ำ</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Simulation Quick Controls -->
+          <div class="mt-6 pt-4 border-t border-slate-100">
+            <p class="text-[11px] font-semibold text-slate-400 mb-2">ทดสอบสลับท่าทางจำลอง (Simulation):</p>
+            <div class="grid grid-cols-4 gap-2 text-xs">
+              <button onclick="simulatePosture('normal')" class="py-1.5 px-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium rounded-lg transition-all text-center">หลังตรง</button>
+              <button onclick="simulatePosture('left')" class="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-all text-center">เอนซ้าย</button>
+              <button onclick="simulatePosture('right')" class="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-all text-center">เอนขวา</button>
+              <button onclick="simulatePosture('slouch')" class="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-all text-center">ก้นไหล</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Sitting Pattern Breakdown -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 class="font-bold text-slate-800 mb-4">รูปแบบการนั่ง <span class="text-xs font-normal text-slate-400">(Sitting Pattern)</span></h3>
+
+            <div class="space-y-4 text-xs">
+              <!-- Normal -->
+              <div>
+                <div class="flex justify-between font-semibold mb-1">
+                  <span class="text-slate-700">ปกติ (หลังตรง สมดุลทั้งสองข้าง)</span>
+                  <span class="text-emerald-600">78%</span>
+                </div>
+                <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div class="h-full bg-emerald-500 rounded-full" style="width: 78%;"></div>
+                </div>
+              </div>
+
+              <!-- Lean Left/Right -->
+              <div>
+                <div class="flex justify-between font-semibold mb-1">
+                  <span class="text-slate-600">เอนซ้าย - ขวา</span>
+                  <span class="text-amber-500">2%</span>
+                </div>
+                <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div class="h-full bg-amber-400 rounded-full" style="width: 2%;"></div>
+                </div>
+              </div>
+
+              <!-- Lean Forward/Back -->
+              <div>
+                <div class="flex justify-between font-semibold mb-1">
+                  <span class="text-slate-600">เอียงหน้า - หลัง</span>
+                  <span class="text-amber-500">4%</span>
+                </div>
+                <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div class="h-full bg-amber-400 rounded-full" style="width: 4%;"></div>
+                </div>
+              </div>
+
+              <!-- Unbalanced Weight -->
+              <div>
+                <div class="flex justify-between font-semibold mb-1">
+                  <span class="text-slate-600">ลงน้ำหนักไม่สมดุล</span>
+                  <span class="text-rose-500">3%</span>
+                </div>
+                <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div class="h-full bg-rose-400 rounded-full" style="width: 3%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-slate-100 text-right">
+            <button onclick="switchTab('stats')" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1">
+              ดูรายละเอียดสถิติทั้งหมด <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Weekly Sitting Graph & Summary Section -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Chart.js Stacked Bar -->
+        <div class="lg:col-span-2 bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-slate-800">สถิติการนั่งของคุณ</h3>
+            <div class="flex gap-1 bg-slate-100 p-1 rounded-xl text-[11px] font-medium text-slate-500">
+              <button class="px-3 py-1 bg-white rounded-lg shadow-sm text-indigo-600">7 วัน</button>
+              <button class="px-3 py-1 hover:text-slate-800">30 วัน</button>
+            </div>
+          </div>
+          <div class="h-56 relative">
+            <canvas id="weeklySittingChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Sitting Behavior Cards -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between space-y-4">
+          <h3 class="font-bold text-slate-800">สรุปพฤติกรรมการนั่ง</h3>
+
+          <div class="space-y-3">
+            <div class="p-3 bg-slate-50 rounded-2xl flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                <i data-lucide="clock" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <p class="text-[10px] text-slate-400">เวลานั่งเฉลี่ยต่อวัน</p>
+                <p class="text-sm font-bold text-slate-700">5 ชม. 42 นาที <span class="text-[10px] font-normal text-emerald-500">↑ 8%</span></p>
+              </div>
+            </div>
+
+            <div class="p-3 bg-slate-50 rounded-2xl flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0">
+                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <p class="text-[10px] text-slate-400">ครั้งที่นั่งไม่เหมาะสม</p>
+                <p class="text-sm font-bold text-slate-700">3 ครั้ง <span class="text-[10px] font-normal text-emerald-500">↓ 50%</span></p>
+              </div>
+            </div>
+
+            <div class="p-3 bg-slate-50 rounded-2xl flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
+                <i data-lucide="calendar" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <p class="text-[10px] text-slate-400">ช่วงเวลานั่งนานที่สุด</p>
+                <p class="text-sm font-bold text-slate-700">10:30 - 12:00 น.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alert Banner at Bottom -->
+      <div class="bg-rose-500 text-white rounded-3xl p-5 shadow-lg shadow-rose-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+            <i data-lucide="alert-circle" class="w-7 h-7"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-base">แจ้งเตือน</span>
+              <span class="bg-white/30 text-xs px-2 py-0.5 rounded-full font-semibold">2</span>
+            </div>
+            <p class="text-sm text-rose-100 mt-0.5">พบรูปแบบการนั่งที่ไม่เหมาะสมต่อเนื่อง 15 นาที</p>
+            <p class="text-xs text-rose-200">คุณมีแนวโน้มเอนตัวไปด้านซ้าย กรุณาตรวจสอบท่าทางการนั่งของคุณ</p>
+          </div>
+        </div>
+        <button onclick="switchTab('alerts')" class="bg-white text-rose-600 font-semibold px-5 py-2.5 rounded-xl text-sm hover:bg-rose-50 transition-all whitespace-nowrap shadow-sm">
+          ดูรายละเอียด
+        </button>
+      </div>
+
+    </div>
+
+    <!-- TAB 2: STATISTICS -->
+    <div id="tab-stats" class="tab-content hidden space-y-6">
+      <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
+        <h3 class="text-lg font-bold text-slate-800 mb-2">วิเคราะห์สถิติอย่างละเอียด</h3>
+        <p class="text-xs text-slate-400 mb-6">รายงานแนวโน้มพฤติกรรมการลงน้ำหนักและการทรงตัวประจำสัปดาห์</p>
+        <div class="h-80 relative">
+          <canvas id="detailedStatsChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: ALERTS -->
+    <div id="tab-alerts" class="tab-content hidden space-y-4">
+      <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
+        <h3 class="text-lg font-bold text-slate-800 mb-4">ประวัติการแจ้งเตือนทั้งหมด</h3>
+        <div class="space-y-3 text-xs">
+          <div class="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex justify-between items-center">
+            <div>
+              <p class="font-bold text-rose-800 text-sm">เอนซ้ายต่อเนื่องเกิน 15 นาที</p>
+              <p class="text-slate-500">วันนี้ 10:24 น.</p>
+            </div>
+            <span class="px-3 py-1 bg-rose-200 text-rose-800 rounded-full font-semibold">รุนแรง</span>
+          </div>
+          <div class="p-4 bg-amber-50 border border-amber-100 rounded-2xl flex justify-between items-center">
+            <div>
+              <p class="font-bold text-amber-800 text-sm">ก้นไหลออกจากพนักพิง</p>
+              <p class="text-slate-500">เมื่อวาน 15:40 น.</p>
+            </div>
+            <span class="px-3 py-1 bg-amber-200 text-amber-800 rounded-full font-semibold">ปานกลาง</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: SETTINGS -->
+    <div id="tab-settings" class="tab-content hidden space-y-6">
+      <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+        <h3 class="text-lg font-bold text-slate-800 mb-4">ตั้งค่าฮาร์ดแวร์ & โปรไฟล์</h3>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">เปลี่ยนชื่อผู้ใช้งาน</label>
+          <input type="text" id="settingsNameInput" class="w-full max-w-md px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50" value="พชรพรรณ">
+        </div>
+        <button onclick="updateNameFromSettings()" class="bg-indigo-600 text-white text-xs font-semibold px-4 py-2.5 rounded-xl hover:bg-indigo-700 transition-all">
+          บันทึกการเปลี่ยนแปลง
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+  <script>
+    // Lucide Icons Initialization
+    lucide.createIcons();
+
+    // App State
+    let currentUserName = "พชรพรรณ";
+    let activePosture = "normal";
+
+    // Onboarding Form Handler
+    document.getElementById("onboardingForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const input = document.getElementById("usernameInput").value.trim();
+      if(input) {
+        currentUserName = input;
+        document.getElementById("displayUsername").innerText = currentUserName;
+        document.getElementById("settingsNameInput").value = currentUserName;
+      }
+      
+      // Simulate Connection Check
+      alert("กำลังค้นหาอุปกรณ์ SITD Smart Cushion Via Web Serial/Bluetooth...\n\n(ยังไม่พบอุปกรณ์ในบริเวณนี้ ระบบจะเริ่มใช้งานในโหมด Demo)");
+      closeWelcomeModal();
+    });
+
+    document.getElementById("btnDemoMode").addEventListener("click", function() {
+      const input = document.getElementById("usernameInput").value.trim();
+      if(input) {
+        currentUserName = input;
+        document.getElementById("displayUsername").innerText = currentUserName;
+        document.getElementById("settingsNameInput").value = currentUserName;
+      }
+      closeWelcomeModal();
+    });
+
+    function closeWelcomeModal() {
+      document.getElementById("welcomeModal").classList.add("hidden");
+    }
+
+    function updateNameFromSettings() {
+      const val = document.getElementById("settingsNameInput").value.trim();
+      if(val) {
+        currentUserName = val;
+        document.getElementById("displayUsername").innerText = currentUserName;
+        alert("บันทึกชื่อเรียบร้อยแล้ว!");
+      }
+    }
+
+    // Tab Navigation Logic
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById('tab-' + tabId).classList.remove('hidden');
+
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-md', 'shadow-indigo-100');
+        btn.classList.add('text-slate-500');
+      });
+
+      const activeNav = document.getElementById('nav-' + tabId);
+      activeNav.classList.remove('text-slate-500');
+      activeNav.classList.add('bg-indigo-600', 'text-white', 'shadow-md', 'shadow-indigo-100');
+    }
+
+    // Heatmap Drawing Engine
+    const canvas = document.getElementById("heatmapCanvas");
+    const ctx = canvas.getContext("2d");
+
+    function renderHeatmap(posture) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw Cushion Outline Frame
+      ctx.fillStyle = "#e2e8f0";
+      ctx.beginPath();
+      ctx.roundRect(10, 10, 160, 160, 24);
+      ctx.fill();
+
+      // Matrix Grid Center Positions for H-shape Pressure Points
+      let points = [];
+      if(posture === "normal") {
+        points = [
+          {x: 55, y: 60, r: 28, color: "rgba(239, 68, 68, 0.8)"},
+          {x: 125, y: 60, r: 28, color: "rgba(239, 68, 68, 0.8)"},
+          {x: 55, y: 120, r: 28, color: "rgba(163, 230, 53, 0.8)"},
+          {x: 125, y: 120, r: 28, color: "rgba(163, 230, 53, 0.8)"}
+        ];
+      } else if(posture === "left") {
+        points = [
+          {x: 45, y: 60, r: 35, color: "rgba(239, 68, 68, 0.9)"},
+          {x: 45, y: 120, r: 35, color: "rgba(239, 68, 68, 0.9)"},
+          {x: 135, y: 60, r: 18, color: "rgba(59, 130, 246, 0.6)"},
+          {x: 135, y: 120, r: 18, color: "rgba(59, 130, 246, 0.6)"}
+        ];
+      } else if(posture === "right") {
+        points = [
+          {x: 135, y: 60, r: 35, color: "rgba(239, 68, 68, 0.9)"},
+          {x: 135, y: 120, r: 35, color: "rgba(239, 68, 68, 0.9)"},
+          {x: 45, y: 60, r: 18, color: "rgba(59, 130, 246, 0.6)"},
+          {x: 45, y: 120, r: 18, color: "rgba(59, 130, 246, 0.6)"}
+        ];
+      } else if(posture === "slouch") {
+        points = [
+          {x: 60, y: 135, r: 38, color: "rgba(239, 68, 68, 0.95)"},
+          {x: 120, y: 135, r: 38, color: "rgba(239, 68, 68, 0.95)"},
+          {x: 60, y: 50, r: 12, color: "rgba(59, 130, 246, 0.4)"},
+          {x: 120, y: 50, r: 12, color: "rgba(59, 130, 246, 0.4)"}
+        ];
+      }
+
+      // Draw Glowing Heatmap Blobs
+      points.forEach(p => {
+        let grad = ctx.createRadialGradient(p.x, p.y, 2, p.x, p.y, p.r);
+        grad.addColorStop(0, p.color);
+        grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    // Simulate Posture Switching
+    function simulatePosture(posture) {
+      activePosture = posture;
+      renderHeatmap(posture);
+
+      const badge = document.getElementById("postureBadge");
+      const desc = document.getElementById("postureDesc");
+      const svg = document.getElementById("postureAvatarSvg");
+
+      if(posture === "normal") {
+        badge.className = "inline-block px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 mb-1";
+        badge.innerText = "นั่งหลังตรง";
+        desc.innerText = "กำลังดีเลย! รักษาสมดุลแบบนี้ไว้";
+        svg.style.transform = "rotate(0deg)";
+      } else if(posture === "left") {
+        badge.className = "inline-block px-3 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700 mb-1";
+        badge.innerText = "เอนไปด้านซ้าย";
+        desc.innerText = "น้ำหนักลงฝั่งซ้ายมากเกินไป ควรปรับหลังให้ตรง";
+        svg.style.transform = "rotate(-12deg)";
+      } else if(posture === "right") {
+        badge.className = "inline-block px-3 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700 mb-1";
+        badge.innerText = "เอนไปด้านขวา";
+        desc.innerText = "น้ำหนักลงฝั่งขวามากเกินไป ควรปรับหลังให้ตรง";
+        svg.style.transform = "rotate(12deg)";
+      } else if(posture === "slouch") {
+        badge.className = "inline-block px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 mb-1";
+        badge.innerText = "ก้นไหล / นั่งหลังค่อม";
+        desc.innerText = "แรงกดไปกองที่ก้นกบ ควรขยับตัวชิดพนักพิง";
+        svg.style.transform = "translateY(8px) rotate(5deg)";
+      }
+    }
+
+    // Chart.js Stacked Bar Chart Setup
+    window.addEventListener("DOMContentLoaded", () => {
+      renderHeatmap("normal");
+
+      const ctxWeekly = document.getElementById('weeklySittingChart').getContext('2d');
+      new Chart(ctxWeekly, {
+        type: 'bar',
+        data: {
+          labels: ['10 ต.ค.', '11 ต.ค.', '12 ต.ค.', '13 ต.ค.', '14 ต.ค.', '15 ต.ค.', '16 ต.ค.'],
+          datasets: [
+            {
+              label: 'นั่งในท่าที่เหมาะสม (ชม.)',
+              data: [4.2, 3.8, 4.5, 3.2, 4.8, 4.8, 5.0],
+              backgroundColor: '#10b981',
+              borderRadius: 6,
+            },
+            {
+              label: 'นั่งในท่าที่ควรระวัง (ชม.)',
+              data: [2.0, 2.5, 1.8, 2.8, 2.0, 1.5, 1.2],
+              backgroundColor: '#c084fc',
+              borderRadius: 6,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { font: { family: 'Kanit' }, usePointStyle: true, boxWidth: 8 }
+            }
+          },
+          scales: {
+            x: { stacked: true, grid: { display: false } },
+            y: { stacked: true, grid: { color: '#f1f5f9' }, max: 8 }
+          }
+        }
+      });
+
+      // Stats Tab Detailed Chart
+      const ctxDetailed = document.getElementById('detailedStatsChart').getContext('2d');
+      new Chart(ctxDetailed, {
+        type: 'line',
+        data: {
+          labels: ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'],
+          datasets: [{
+            label: 'คะแนนความถูกต้องในการนั่ง (%)',
+            data: [65, 70, 68, 74, 80, 78, 85],
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { font: { family: 'Kanit' } } } },
+          scales: { y: { min: 0, max: 100 } }
+        }
+      });
+    });
+  </script>
+</body>
+</html>
